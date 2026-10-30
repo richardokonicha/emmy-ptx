@@ -18,14 +18,32 @@ Requires Python 3.10+ and `emmy-ml` (used only to load the IR via `Graph.from_di
 ## Usage
 
 ```bash
+# Default: PTX 8.0, target sm_89
 emmy-ptx path/to/kernel.ir.json > out.ptx
+
+# Target a different GPU architecture
+emmy-ptx path/to/kernel.ir.json --target sm_90 > out.ptx
+
+# Select PTX ISA version
+emmy-ptx path/to/kernel.ir.json --version 8.5 --target sm_90 > out.ptx
+
+# Write to a file
+emmy-ptx path/to/kernel.ir.json -o out.ptx
 ```
 
 Or from Python:
 
 ```python
-from emmy_ptx import Compiler
+from emmy_ptx import Compiler, compile_file
+
+# Default target
 ptx = Compiler("path/to/kernel.ir.json").compile()
+
+# Custom target
+ptx = Compiler("path/to/kernel.ir.json", target="sm_90", ptx_version="8.5").compile()
+
+# Convenience function
+ptx = compile_file("path/to/kernel.ir.json", target="sm_90")
 ```
 
 The output is PTX text that `ptxas` assembles directly. The entry-point name, parameter order, and

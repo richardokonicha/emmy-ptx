@@ -52,7 +52,18 @@ from emmy.compiler.ir.stmt import (
     Write,
 )
 
-PTX_HEADER = ".version 8.0\n.target sm_89\n.address_size 64\n"
+SUPPORTED_TARGETS = {
+    "sm_70", "sm_75", "sm_80", "sm_86", "sm_89", "sm_90", "sm_100",
+}
+SUPPORTED_VERSIONS = {"7.0", "7.5", "8.0", "8.5", "9.0"}
+
+
+def ptx_header(version: str = "8.0", target: str = "sm_89") -> str:
+    if target not in SUPPORTED_TARGETS:
+        raise ValueError(f"unsupported target {target!r}; choose from {sorted(SUPPORTED_TARGETS)}")
+    if version not in SUPPORTED_VERSIONS:
+        raise ValueError(f"unsupported PTX version {version!r}; choose from {sorted(SUPPORTED_VERSIONS)}")
+    return f".version {version}\n.target {target}\n.address_size 64\n"
 SMEM_STATIC_LIMIT = 48 * 1024
 # Upper bound on fully-unrolled trip count.  Unrolling a large loop would
 # explode the PTX (extent 100k -> 30+ MB) and stall ptxas, so wide loops
@@ -196,8 +207,10 @@ class Emitter:
 
 
 class Compiler:
-    def __init__(self, ir_path: Path):
+    def __init__(self, ir_path: Path, *, target: str = "sm_89", ptx_version: str = "8.0"):
         self.ir_path = Path(ir_path)
+        self.target = target
+        self.ptx_version = ptx_version
         self.raw = json.loads(self.ir_path.read_text())
         self.graph = Graph.from_dict(self.raw)
         self.kernel = self._find_kernel()
@@ -2134,7 +2147,7 @@ class Compiler:
             self._param_decl(name, self.args.get(name, {"dtype": self.dtype_of(name), "shape": self.shape_of(name)}))
             for name in self.arg_order
         )
-        out = [PTX_HEADER]
+        out = [ptx_header(self.ptx_version, self.target)]
         if self.shared_decls:
             out.append("\n".join(self.shared_decls) + "\n")
         out.append(f".visible .entry {self.entry}(\n{params}\n)\n{{")
@@ -2145,8 +2158,8 @@ class Compiler:
         return "\n".join(out)
 
 
-def compile_file(path) -> str:
-    return Compiler(path).compile()
+def compile_file(path, *, target: str = "sm_89", ptx_version: str = "8.0") -> str:
+    return Compiler(path, target=target, ptx_version=ptx_version).compile()
 
 
 def main():

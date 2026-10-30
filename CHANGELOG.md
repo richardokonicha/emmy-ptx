@@ -2,6 +2,15 @@
 
 All notable changes to emmy-ptx are documented here.
 
+## [Unreleased]
+
+### Added
+- `--target` CLI flag to switch GPU architectures (sm_70–sm_100)
+- `--version` CLI flag to select PTX ISA version (7.0–9.0)
+- `-o` / `--output` flag for file output
+- `Compiler(target=..., ptx_version=...)` constructor parameters
+- `ptx_header()`, `SUPPORTED_TARGETS`, `SUPPORTED_VERSIONS` exported from package
+
 ## [0.1.0] — 2026-10-30
 
 ### Added
