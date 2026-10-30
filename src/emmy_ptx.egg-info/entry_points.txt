@@ -1,2 +1,0 @@
-[console_scripts]
-emmy-ptx = emmy_ptx.cli:main
