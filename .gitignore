@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 src/*.egg-info/
 .venv/
+config.bat
+node_modules
