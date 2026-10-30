@@ -43,6 +43,36 @@ launch geometry come from the problem's `meta.json`, not from the IR body.
 - **Reductions:** warp shuffles, tree reductions, barriers, segmented (transposed) trees
 - **Mixed precision:** operands are converted to the promoted dtype before the operation
 
+## How it works
+
+The compiler is a single Python module (~2,200 lines, stdlib only) with four layers:
+
+1. **Reader** — loads the IR with `Graph.from_dict`, finds the `KernelOp`, recovers shapes
+   and dtypes from the raw JSON and `meta.json` (the IR's own annotations are unreliable).
+2. **Lowering** — walks the body statements in order, maintaining a map from IR value names
+   to registers. SSA phi nodes become `alloca` + load/store; loops become structured PTX
+   control flow; reductions become shared-memory staging + warp shuffles + `bar.sync`.
+3. **Emitter** — renders PTX text with per-kernel register budgets and shared-memory layouts.
+4. **Driver** — dispatch table keyed on IR op name; one method per node type.
+
+The entry-point name, parameter order, and launch geometry all come from `meta.json`, not
+from the IR body. This is the contract the challenge (and any real deployment) relies on.
+
+## Architecture
+
+```
+compile.py (single module)
+├── Compiler class
+│   ├── __init__       — load IR, find kernel, find meta
+│   ├── prologue()     — .version/.target, signature, param loads, cvta, thread id
+│   ├── stmt()         — dispatch table (20+ entry types)
+│   ├── expr()         — recursive index expression compiler
+│   ├── coerce()       — dtype conversion (f32/f64/i32/i64)
+│   └── op_on_regs()   — elementwise op lowering
+├── PTXEmitter        — register pools, instruction emission
+└── main()             — CLI entry point
+```
+
 ## What it does NOT do
 
 - f16: the runner's `ptxas` has no `.f16` type, so half-precision kernels cannot exist on this target
