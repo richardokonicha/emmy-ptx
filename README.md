@@ -49,6 +49,21 @@ ptx = compile_file("path/to/kernel.ir.json", target="sm_90")
 The output is PTX text that `ptxas` assembles directly. The entry-point name, parameter order, and
 launch geometry come from the problem's `meta.json`, not from the IR body.
 
+## CLI reference
+
+```
+emmy-ptx [-h] [--target TARGET] [--version VERSION] [-o OUTPUT]
+               [--check] [--cache-dir CACHE_DIR] ir_path
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--target` | GPU architecture (sm_70–sm_100) | `sm_89` |
+| `--version` | PTX ISA version (7.0–9.0) | `8.0` |
+| `-o` / `--output` | Write PTX to file instead of stdout | stdout |
+| `--check` | Validate IR without compiling; print issues | off |
+| `--cache-dir` | Cache compiled PTX by IR hash | none |
+
 ## What it handles
 
 - **All five kernel categories:** pointwise, reductions, matmuls, fused (rmsnorm/softmax), attention
@@ -89,6 +104,22 @@ compile.py (single module)
 │   └── op_on_regs()   — elementwise op lowering
 ├── PTXEmitter        — register pools, instruction emission
 └── main()             — CLI entry point
+```
+
+## Error messages
+
+Compilation failures include the offending IR statement for easy debugging:
+
+```
+unsupported float binary op 'foo'
+  while lowering: Assign(name='v0__u0', op=ElementwiseImpl('foo'), ...)
+```
+
+Use `--check` to validate an IR file without compiling:
+
+```bash
+emmy-ptx kernel.ir.json --check
+# OK — no issues found
 ```
 
 ## What it does NOT do
