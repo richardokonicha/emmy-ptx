@@ -11,6 +11,7 @@ renderer is used.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import struct
 import sys
@@ -2137,6 +2138,49 @@ class Compiler:
         for name in self.smem:
             self._materialize_smem_base(name)
 
+    def check(self) -> list[str]:
+        """Validate the IR without producing PTX. Returns a list of issues (empty = OK)."""
+        issues = []
+        if not self.ir_path.exists():
+            return [f"IR file not found: {self.ir_path}"]
+        try:
+            self.raw = json.loads(self.ir_path.read_text())
+        except json.JSONDecodeError as exc:
+            return [f"invalid JSON: {exc}"]
+        try:
+            self.graph = Graph.from_dict(self.raw)
+        except Exception as exc:
+            return [f"IR parse error: {exc}"]
+        try:
+            self.kernel = self._find_kernel()
+        except SystemExit as exc:
+            return [str(exc)]
+        if getattr(self.kernel, "serial", None):
+            issues.append("KernelOp.serial is not empty (not implemented)")
+        try:
+            self.meta = self._find_meta()
+            self.kmeta = self._kernel_meta()
+        except SystemExit as exc:
+            issues.append(str(exc))
+        if not self.kmeta:
+            issues.append("no meta.json found — argument order and launch geometry are unknown")
+        # Validate target
+        try:
+            ptx_header(self.ptx_version, self.target)
+        except ValueError as exc:
+            issues.append(str(exc))
+        # Check for unsupported ops
+        try:
+            body = self.kernel.body
+            statements = body if isinstance(body, list) else [body]
+            for stmt in statements:
+                # Quick scan for known-unsupported patterns
+                if "SetMaxNReg" in str(stmt):
+                    issues.append("SetMaxNReg will be dropped (ptxas does not support it)")
+        except Exception:
+            pass
+        return issues
+
     def compile(self) -> str:
         self.plan_smem()
         self.emit_prologue()
@@ -2158,8 +2202,29 @@ class Compiler:
         return "\n".join(out)
 
 
-def compile_file(path, *, target: str = "sm_89", ptx_version: str = "8.0") -> str:
-    return Compiler(path, target=target, ptx_version=ptx_version).compile()
+def compile_file(path, *, target: str = "sm_89", ptx_version: str = "8.0",
+            cache_dir=None) -> str:
+    if cache_dir is not None:
+        import os
+        os.makedirs(cache_dir, exist_ok=True)
+        key = _cache_key(path, target, ptx_version)
+        cache_path = os.path.join(cache_dir, key + ".ptx")
+        if os.path.exists(cache_path):
+            return open(cache_path).read()
+    result = Compiler(path, target=target, ptx_version=ptx_version).compile()
+    if cache_dir is not None:
+        with open(cache_path, "w") as f:
+            f.write(result)
+    return result
+
+def _cache_key(path, target, ptx_version) -> str:
+    h = hashlib.sha256()
+    h.update(open(path, "rb").read())
+    meta = Path(path).with_name("meta.json")
+    if meta.exists():
+        h.update(meta.read_bytes())
+    h.update(f"{target}:{ptx_version}".encode())
+    return h.hexdigest()[:16]
 
 
 def main():

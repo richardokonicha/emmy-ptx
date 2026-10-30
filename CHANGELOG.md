@@ -5,6 +5,8 @@ All notable changes to emmy-ptx are documented here.
 ## [Unreleased]
 
 ### Added
+- `--check` mode: validate IR without compiling
+- `--cache-dir` flag: cache compiled PTX by IR hash (skip recompilation on cache hit)
 - `--target` CLI flag to switch GPU architectures (sm_70–sm_100)
 - `--version` CLI flag to select PTX ISA version (7.0–9.0)
 - `-o` / `--output` flag for file output

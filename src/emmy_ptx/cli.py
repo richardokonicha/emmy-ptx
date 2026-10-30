@@ -1,5 +1,6 @@
 """Command-line entry point for emmy-ptx."""
 import argparse
+import os
 import sys
 
 from .compiler import Compiler, SUPPORTED_TARGETS, SUPPORTED_VERSIONS
@@ -21,11 +22,38 @@ def main() -> int:
         help="PTX ISA version (default: 8.0)",
     )
     parser.add_argument("-o", "--output", help="write PTX to this file instead of stdout")
+    parser.add_argument(
+        "--check", action="store_true",
+        help="validate the IR without compiling; print issues and exit",
+    )
+    parser.add_argument(
+        "--cache-dir", default=None,
+        help="cache compiled PTX by IR hash (skip recompilation on cache hit)",
+    )
     args = parser.parse_args()
 
+    if args.check:
+        try:
+            compiler = Compiler(args.ir_path, target=args.target, ptx_version=args.ptx_version)
+            issues = compiler.check()
+        except Exception as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        if issues:
+            print(f"{len(issues)} issue(s) found:")
+            for issue in issues:
+                print(f"  - {issue}")
+            return 1
+        print("OK — no issues found")
+        return 0
+
     try:
-        ptx = Compiler(args.ir_path, target=args.target, ptx_version=args.ptx_version).compile()
-    except (SystemExit, ValueError) as exc:
+        from .compiler import compile_file
+        ptx = compile_file(
+            args.ir_path, target=args.target, ptx_version=args.ptx_version,
+            cache_dir=args.cache_dir,
+        )
+    except (SystemExit, ValueError, Exception) as exc:
         print(str(exc), file=sys.stderr)
         return 1
     if args.output:

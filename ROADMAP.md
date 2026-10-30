@@ -14,10 +14,10 @@
 
 ## v0.2.0 — Usability and portability
 
-- [ ] `--target` flag to switch GPU architectures (sm_89, sm_90, sm_100)
+- [x] `--target` flag to switch GPU architectures (sm_70–sm_100)
 - [ ] `--version` flag for PTX ISA version selection
-- [ ] Caching layer — hash the IR, skip recompilation
-- [ ] `--output` / `-o` flag for file output (instead of stdout only)
+- [x] Caching layer — hash the IR + meta.json, skip recompilation on cache hit
+- [x] `-o` / `--output` flag for file output
 - [ ] Better error messages with source locations
 - [ ] `emmy-ptx --check` — validate IR without compiling
 - [ ] Python 3.10 compatibility testing
