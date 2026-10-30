@@ -1410,8 +1410,16 @@ class Compiler:
         if s is None:
             return
         if isinstance(s, (Body, list, tuple)):
-            for child in s:
-                self.stmt(child)
+            for i, child in enumerate(s):
+                try:
+                    self.stmt(child)
+                except (SystemExit, Exception) as exc:
+                    msg = str(exc)
+                    if "while lowering statement" not in msg:
+                        raise SystemExit(
+                            f"{msg}\n  while lowering statement [{i}]: {child!r}"
+                        ) from exc
+                    raise
             return
         method = {
             "Tile": self.stmt_tile,
@@ -1436,8 +1444,18 @@ class Compiler:
             "ZeroPrologue": self.stmt_zero_prologue,
         }.get(type(s).__name__)
         if method is None:
-            raise SystemExit(f"unsupported statement {type(s).__name__}: {s!r}")
-        method(s)
+            raise SystemExit(
+                f"unsupported statement {type(s).__name__}: {s!r}"
+            )
+        try:
+            method(s)
+        except (SystemExit, Exception) as exc:
+            msg = str(exc)
+            if "while lowering statement" not in msg:
+                raise SystemExit(
+                    f"{msg}\n  while lowering: {s!r}"
+                ) from exc
+            raise
 
     def stmt_smem(self, s):
         return

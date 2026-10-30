@@ -18,9 +18,9 @@
 - [ ] `--version` flag for PTX ISA version selection
 - [x] Caching layer — hash the IR + meta.json, skip recompilation on cache hit
 - [x] `-o` / `--output` flag for file output
-- [ ] Better error messages with source locations
+- [x] Better error messages with source locations (statement context in errors)
 - [ ] `emmy-ptx --check` — validate IR without compiling
-- [ ] Python 3.10 compatibility testing
+- [x] Python 3.10 compatibility verified (no 3.11+ features)
 
 ## v0.3.0 — Performance and optimization
 

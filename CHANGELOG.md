@@ -5,6 +5,8 @@ All notable changes to emmy-ptx are documented here.
 ## [Unreleased]
 
 ### Added
+- Better error messages: compilation failures now include the offending IR statement
+- Python 3.10 compatibility verified (no 3.11+ features used)
 - `--check` mode: validate IR without compiling
 - `--cache-dir` flag: cache compiled PTX by IR hash (skip recompilation on cache hit)
 - `--target` CLI flag to switch GPU architectures (sm_70–sm_100)
